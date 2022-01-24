@@ -116,12 +116,36 @@ class OPTIONS_PROBABILITY_CONE:
         self.iv= self.calls_iv_float.copy()
         self.iv['implied volatility'] = (self.calls_iv_float[
             'implied volatility'] + self.puts_iv_float['implied volatility']) / 2
+
+    def after_hours_fix(self):
+        # I created this method to deal with a weird issue td ameritrade's API
+        # Hhas when it comes to options data after hours where it will give
+        # random -999.0 values which are not accurate. So here I am replacing
+        # those wrong iv values with the average of the nearest expiration dates
+        # in order to approximate the missing implied volatilty value
+        OPTIONS_PROBABILITY_CONE.implied_volatility(self)
+        self.iv_fix = self.iv.copy()
+        self.iv_fix = self.iv_fix[self.iv_fix['implied volatility'] == -999.0]
+        self.iv_fix = self.iv_fix.reset_index()
+        self.wrong_list = self.iv_fix['index'].to_list()
+
+        self.fix_list = []
+        for i in self.wrong_list:
+            self.index_up = i + 1
+            self.index_down = i - 1
+            self.value_up = self.iv['implied volatility'].loc[self.index_up]
+            self.value_down = self.iv['implied volatility'].loc[self.index_down]
+            self.average_val = (self.value_up + self.value_down) / 2
+            self.fix_list.append(self.average_val)
+
+        for i, x in zip(self.wrong_list, self.fix_list):
+            self.iv.loc[i, 'implied volatility'] = x
         
     def expected_move(self):
         # we calculate the expected move by taking the stock price multiplied by
         # implied volatilty and then multiplied by the square root of the days
         # to expiration divided by 365
-        OPTIONS_PROBABILITY_CONE.implied_volatility(self)
+        OPTIONS_PROBABILITY_CONE.after_hours_fix(self)
         self.stock_price = self.dictionary['underlyingPrice']
         self.exp_move_calc = self.iv.copy()
         self.exp_move_calc['dte'] = self.calls_dte['exp_dates']
