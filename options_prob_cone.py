@@ -91,17 +91,17 @@ class OPTIONS_PROBABILITY_CONE:
     def fix_values(self):
         # This method is used for NaN values that appear when using TD Ameritrades
         # API. Typically caused by expiration dates that are on the same day and 
-        # have null values for option greeks 
+        # have null values for option greeks
         OPTIONS_PROBABILITY_CONE.days_to_expiration(self)
         self.calls_iv_str = self.calls_iv_sliced.copy()
         self.calls_iv_str['implied volatility'] = self.calls_iv_sliced[
             'implied volatility'].astype(str)
-        self.calls_iv_str['implied volatility'].str.replace('NaN', '1')
+        self.calls_iv_str = self.calls_iv_str.replace('NaN', '0')
 
         self.puts_iv_str = self.puts_iv_sliced.copy()
         self.puts_iv_str['implied volatility'] = self.puts_iv_sliced[
             'implied volatility'].astype(str)
-        self.puts_iv_str['implied volatility'].str.replace('Nan', '1')
+        self.puts_iv_str = self.puts_iv_str.replace('Nan', '0')
     
     def implied_volatility(self):
         # Here we are are taking the average of the calls and puts implied
